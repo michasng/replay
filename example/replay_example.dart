@@ -184,15 +184,18 @@ class TransferMoneyCommandDecider
 void main() {
   final aggregate = Aggregate<BankCommand, BankEvent, BankState>(
     initialState: BankState(balanceByAccountName: {}),
-    commandDecider: ComposableCommandDecider()
-      ..register<OpenAccountCommand>(OpenAccountCommandDecider())
-      ..register<CloseAccountCommand>(CloseAccountCommandDecider())
-      ..register<TransferMoneyCommand>(TransferMoneyCommandDecider()),
-    eventReducer: ComposableEventReducer()
-      ..register<BalanceSetEvent>(BalanceSetEventReducer())
-      ..register<BalanceUnsetEvent>(BalanceUnsetEventReducer()),
-    eventStore: InMemoryEventStore<BankEvent>()
-      ..append(BalanceSetEvent(accountName: 'Foo', balance: 1000)),
+    commandDecider: ComposableCommandDecider({
+      OpenAccountCommand: OpenAccountCommandDecider(),
+      CloseAccountCommand: CloseAccountCommandDecider(),
+      TransferMoneyCommand: TransferMoneyCommandDecider(),
+    }),
+    eventReducer: ComposableEventReducer({
+      BalanceSetEvent: BalanceSetEventReducer(),
+      BalanceUnsetEvent: BalanceUnsetEventReducer(),
+    }),
+    eventStore: InMemoryEventStore([
+      BalanceSetEvent(accountName: 'Foo', balance: 1000),
+    ]),
     replayStoredEvents: true,
     onEventReduced: (event, _, _) => print('Reduced $event'),
   );

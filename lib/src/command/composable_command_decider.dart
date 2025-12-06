@@ -3,8 +3,11 @@ import 'package:replay/src/internal/typed_registry.dart';
 
 class ComposableCommandDecider<TCommand, TEvent, TState>
     implements CommandDecider<TCommand, TEvent, TState> {
-  final TypedRegistry<CommandDecider<TCommand, TEvent, TState>> _registry =
-      TypedRegistry();
+  final TypedRegistry<CommandDecider<TCommand, TEvent, TState>> _registry;
+
+  ComposableCommandDecider([
+    Map<Type, CommandDecider<TCommand, TEvent, TState>>? deciderByCommandType,
+  ]) : _registry = TypedRegistry(deciderByCommandType);
 
   void register<TConcreteCommand extends TCommand>(
     CommandDecider<TConcreteCommand, TEvent, TState> commandDecider,

@@ -15,24 +15,25 @@ class Event2 implements Event {}
 
 void main() {
   group('ComposableEventReducer', () {
+    final event0ReducerMock = EventReducerMock<Event0, State>();
+    final event1ReducerMock = EventReducerMock<Event1, State>();
     late ComposableEventReducer<Event, State> composableEventReducer;
 
     setUp(() {
-      composableEventReducer = ComposableEventReducer();
+      event0ReducerMock.clear();
+      event1ReducerMock.clear();
+
+      composableEventReducer = ComposableEventReducer({
+        Event0: event0ReducerMock,
+      });
     });
 
     group('register', () {
       test(
-        'when registering multiple reducers for the same event type, throws',
+        'when registering another reducer for the same event type, throws',
         () {
-          composableEventReducer.register<Event0>(
-            EventReducerMock<Event0, State>(),
-          );
-
           expect(
-            () => composableEventReducer.register<Event0>(
-              EventReducerMock<Event0, State>(),
-            ),
+            () => composableEventReducer.register<Event0>(event0ReducerMock),
             throwsA(
               allOf(
                 isArgumentError,
@@ -48,42 +49,31 @@ void main() {
       );
 
       test(
-        "when registering reducers for multiple event types, doesn't throw",
+        "when registering another reducer for a different event type, doesn't throw",
         () {
-          composableEventReducer.register<Event0>(
-            EventReducerMock<Event0, State>(),
-          );
-          composableEventReducer.register<Event1>(
-            EventReducerMock<Event1, State>(),
-          );
+          composableEventReducer.register<Event1>(event1ReducerMock);
         },
       );
     });
 
     group('reduce', () {
-      final event0ReducerMock = EventReducerMock<Event0, State>();
-      final event1ReducerMock = EventReducerMock<Event1, State>();
-
       setUp(() {
-        event0ReducerMock.clear();
-        composableEventReducer
-          ..register<Event0>(event0ReducerMock)
-          ..register<Event1>(event1ReducerMock);
+        composableEventReducer.register<Event1>(event1ReducerMock);
       });
 
       test(
         'given a known event type, calls only the reducer registered for that type',
         () {
-          final event = Event0();
+          final event = Event1();
           final state = State();
           final expectedState = State();
-          event0ReducerMock.onReduce = (_, _) => expectedState;
+          event1ReducerMock.onReduce = (_, _) => expectedState;
 
           final events = composableEventReducer.reduce(event, state);
 
-          expect(event0ReducerMock.calls, [(event, state)]);
           expect(events, expectedState);
-          expect(event1ReducerMock.calls, isEmpty);
+          expect(event0ReducerMock.calls, isEmpty);
+          expect(event1ReducerMock.calls, [(event, state)]);
         },
       );
 

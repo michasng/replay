@@ -3,7 +3,11 @@ import 'package:replay/src/internal/typed_registry.dart';
 
 class ComposableEventReducer<TEvent, TState>
     implements EventReducer<TEvent, TState> {
-  final TypedRegistry<EventReducer<TEvent, TState>> _registry = TypedRegistry();
+  final TypedRegistry<EventReducer<TEvent, TState>> _registry;
+
+  ComposableEventReducer([
+    Map<Type, EventReducer<TEvent, TState>>? reducerByEventType,
+  ]) : _registry = TypedRegistry(reducerByEventType);
 
   void register<TConcreteEvent extends TEvent>(
     EventReducer<TConcreteEvent, TState> eventReducer,
