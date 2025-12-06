@@ -20,8 +20,8 @@ void main() {
     late ComposableEventReducer<Event, State> composableEventReducer;
 
     setUp(() {
-      event0ReducerMock.clear();
-      event1ReducerMock.clear();
+      event0ReducerMock.calls.clear();
+      event1ReducerMock.calls.clear();
 
       composableEventReducer = ComposableEventReducer({
         Event0: event0ReducerMock,

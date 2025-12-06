@@ -25,8 +25,8 @@ void main() {
     composableCommandDecider;
 
     setUp(() {
-      command0DeciderMock.clear();
-      command1DeciderMock.clear();
+      command0DeciderMock.calls.clear();
+      command1DeciderMock.calls.clear();
 
       composableCommandDecider = ComposableCommandDecider({
         Command0: command0DeciderMock,

@@ -20,8 +20,8 @@ void main() {
     late Aggregate<IncrementCommand, IncrementedEvent, CountState> aggregate;
 
     setUp(() {
-      commandDeciderMock.clear();
-      eventReducerMock.clear();
+      commandDeciderMock.calls.clear();
+      eventReducerMock.calls.clear();
       onEventReducedCalls.clear();
     });
 

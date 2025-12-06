@@ -7,10 +7,6 @@ class CommandDeciderMock<TCommand, TEvent, TState>
 
   CommandDeciderMock([this.onDecide]);
 
-  void clear() {
-    calls.clear();
-  }
-
   @override
   Iterable<TEvent> decide(TCommand command, TState state) {
     calls.add((command, state));

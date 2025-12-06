@@ -6,10 +6,6 @@ class EventReducerMock<TEvent, TState> implements EventReducer<TEvent, TState> {
 
   EventReducerMock([this.onReduce]);
 
-  void clear() {
-    calls.clear();
-  }
-
   @override
   TState reduce(TEvent event, TState state) {
     calls.add((event, state));
