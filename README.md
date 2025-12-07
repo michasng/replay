@@ -1,4 +1,6 @@
-An Event Sourcing framework for Dart.
+# Replay
+
+Event Sourcing framework for Dart to build auditable apps with immutable events.
 
 ## Why Event Sourcing?
 
