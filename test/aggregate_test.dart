@@ -33,7 +33,7 @@ void main() {
       onEventReducedCalls.add((event, previousState, updatedState));
     }
 
-    group('when a custom event store is used with replay', () {
+    group('when a custom event storage is used with replay', () {
       final storedEvents = [IncrementedEvent(), IncrementedEvent()];
       final intermediateState = CountState(1);
       final finalState = CountState(2);
@@ -43,14 +43,14 @@ void main() {
           initialState: initialState,
           commandDecider: commandDeciderMock,
           eventReducer: eventReducerMock,
-          eventStore: InMemoryEventStore(storedEvents),
+          eventStorage: InMemoryEventStorage(storedEvents),
           replayStoredEvents: true,
           onEventReduced: onEventReduced,
         );
       });
 
-      test('event store is set', () {
-        expect(aggregate.eventStore.iterable, storedEvents);
+      test('event storage is set', () {
+        expect(aggregate.eventStorage.iterable, storedEvents);
       });
 
       test('events are replayed', () {
@@ -66,7 +66,7 @@ void main() {
       });
     });
 
-    group('when a custom event store is used without replay', () {
+    group('when a custom event storage is used without replay', () {
       final storedEvents = [IncrementedEvent(), IncrementedEvent()];
 
       setUp(() {
@@ -74,13 +74,13 @@ void main() {
           initialState: initialState,
           commandDecider: commandDeciderMock,
           eventReducer: eventReducerMock,
-          eventStore: InMemoryEventStore(storedEvents),
+          eventStorage: InMemoryEventStorage(storedEvents),
           onEventReduced: onEventReduced,
         );
       });
 
-      test('event store is set', () {
-        expect(aggregate.eventStore.iterable, storedEvents);
+      test('event storage is set', () {
+        expect(aggregate.eventStorage.iterable, storedEvents);
       });
 
       test('events are not replayed', () {
@@ -90,7 +90,7 @@ void main() {
       });
     });
 
-    group('when the default event store is used', () {
+    group('when the default event storage is used', () {
       setUp(() {
         aggregate = Aggregate(
           initialState: initialState,
@@ -100,8 +100,8 @@ void main() {
         );
       });
 
-      test('event store is empty', () {
-        expect(aggregate.eventStore.iterable, isEmpty);
+      test('event storage is empty', () {
+        expect(aggregate.eventStorage.iterable, isEmpty);
       });
 
       test('events are not replayed', () {
@@ -119,12 +119,12 @@ void main() {
         setUp(() {
           aggregate.replay(
             initialState: newInitialState,
-            eventStore: InMemoryEventStore(storedEvents),
+            eventStorage: InMemoryEventStorage(storedEvents),
           );
         });
 
-        test('event store is set', () {
-          expect(aggregate.eventStore.iterable, storedEvents);
+        test('event storage is set', () {
+          expect(aggregate.eventStorage.iterable, storedEvents);
         });
 
         test('events are replayed', () {
@@ -176,7 +176,7 @@ void main() {
             expect(commandDeciderMock.calls, [(command, initialState)]);
             expect(eventReducerMock.calls, isEmpty);
             expect(onEventReducedCalls, isEmpty);
-            expect(aggregate.eventStore.iterable, isEmpty);
+            expect(aggregate.eventStorage.iterable, isEmpty);
             expect(aggregate.currentState, initialState);
           });
         });
@@ -225,7 +225,7 @@ void main() {
               (events[1], intermediateState),
             ]);
             expect(onEventReducedCalls, isEmpty);
-            expect(aggregate.eventStore.iterable, isEmpty);
+            expect(aggregate.eventStorage.iterable, isEmpty);
             expect(aggregate.currentState, initialState);
           });
         });
@@ -248,7 +248,7 @@ void main() {
               (events[0], initialState, intermediateState),
               (events[1], intermediateState, finalState),
             ]);
-            expect(aggregate.eventStore.iterable, events);
+            expect(aggregate.eventStorage.iterable, events);
             expect(aggregate.currentState, finalState);
           });
         });

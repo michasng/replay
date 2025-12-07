@@ -54,7 +54,7 @@ final aggregate = Aggregate<BankCommand, BankEvent, BankState>(
     BalanceSetEvent: BalanceSetEventReducer(),
     BalanceUnsetEvent: BalanceUnsetEventReducer(),
   }),
-  eventStorage: InMemoryEventStore(),
+  eventStorage: InMemoryEventStorage(),
 );
 
 aggregate.process(OpenAccountCommand(accountName: 'Foo', initialBalance: 100));

@@ -4,15 +4,15 @@ import 'package:test/test.dart';
 class Event {}
 
 void main() {
-  group('InMemoryEventStore', () {
-    late InMemoryEventStore<Event> eventStore;
+  group('InMemoryEventStorage', () {
+    late InMemoryEventStorage<Event> eventStorage;
 
     setUp(() {
-      eventStore = InMemoryEventStore();
+      eventStorage = InMemoryEventStorage();
     });
 
     test('initially, iterable is empty', () {
-      expect(eventStore.iterable, isEmpty);
+      expect(eventStorage.iterable, isEmpty);
     });
 
     group('after events have been appended', () {
@@ -20,17 +20,17 @@ void main() {
 
       setUp(() {
         for (final event in events) {
-          eventStore.append(event);
+          eventStorage.append(event);
         }
       });
 
       test('iterable returns all events in order', () {
-        expect(eventStore.iterable, events);
+        expect(eventStorage.iterable, events);
       });
 
       test('iterable can be read multiple times', () {
-        expect(eventStore.iterable, events);
-        expect(eventStore.iterable, events);
+        expect(eventStorage.iterable, events);
+        expect(eventStorage.iterable, events);
       });
     });
   });

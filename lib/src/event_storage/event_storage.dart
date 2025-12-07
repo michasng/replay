@@ -1,4 +1,4 @@
-abstract interface class EventStore<TEvent> {
+abstract interface class EventStorage<TEvent> {
   Iterable<TEvent> get iterable;
   void append(TEvent event);
 }

@@ -193,7 +193,7 @@ void main() {
       BalanceSetEvent: BalanceSetEventReducer(),
       BalanceUnsetEvent: BalanceUnsetEventReducer(),
     }),
-    eventStore: InMemoryEventStore([
+    eventStorage: InMemoryEventStorage([
       BalanceSetEvent(accountName: 'Foo', balance: 1000),
     ]),
     replayStoredEvents: true,

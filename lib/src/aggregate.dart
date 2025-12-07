@@ -1,7 +1,7 @@
 import 'package:replay/src/command/command_decider.dart';
 import 'package:replay/src/event/event_reducer.dart';
-import 'package:replay/src/event_store/event_store.dart';
-import 'package:replay/src/event_store/in_memory_event_store.dart';
+import 'package:replay/src/event_storage/event_storage.dart';
+import 'package:replay/src/event_storage/in_memory_event_storage.dart';
 
 typedef OnEventReduced<TEvent, TState> =
     void Function(TEvent event, TState previousState, TState updatedState);
@@ -14,35 +14,35 @@ class Aggregate<TCommand, TEvent, TState> {
   TState _stateSnapshot;
   TState get currentState => _stateSnapshot;
 
-  EventStore<TEvent> _eventStore;
-  EventStore<TEvent> get eventStore => _eventStore;
+  EventStorage<TEvent> _eventStorage;
+  EventStorage<TEvent> get eventStorage => _eventStorage;
 
   Aggregate({
     required TState initialState,
     required CommandDecider<TCommand, TEvent, TState> commandDecider,
     required EventReducer<TEvent, TState> eventReducer,
-    EventStore<TEvent>? eventStore,
+    EventStorage<TEvent>? eventStorage,
     bool replayStoredEvents = false,
     OnEventReduced<TEvent, TState>? onEventReduced,
   }) : _stateSnapshot = initialState,
        _commandDecider = commandDecider,
        _eventReducer = eventReducer,
-       _eventStore = eventStore ?? InMemoryEventStore(),
+       _eventStorage = eventStorage ?? InMemoryEventStorage(),
        _onEventReduced = onEventReduced {
     if (replayStoredEvents) _replayStoredEvents();
   }
 
   void replay({
     required TState initialState,
-    required EventStore<TEvent> eventStore,
+    required EventStorage<TEvent> eventStorage,
   }) {
     _stateSnapshot = initialState;
-    _eventStore = eventStore;
+    _eventStorage = eventStorage;
     _replayStoredEvents();
   }
 
   void _replayStoredEvents() {
-    final events = _eventStore.iterable;
+    final events = _eventStorage.iterable;
     if (events.isNotEmpty) {
       for (final event in events) {
         final previousState = _stateSnapshot;
@@ -73,7 +73,7 @@ class Aggregate<TCommand, TEvent, TState> {
       final previousState = _stateSnapshot;
       _stateSnapshot = reduction.updatedState;
 
-      _eventStore.append(reduction.event);
+      _eventStorage.append(reduction.event);
 
       _onEventReduced?.call(reduction.event, previousState, _stateSnapshot);
     }

@@ -1,9 +1,9 @@
-import 'package:replay/src/event_store/event_store.dart';
+import 'package:replay/src/event_storage/event_storage.dart';
 
-class InMemoryEventStore<TEvent> implements EventStore<TEvent> {
+class InMemoryEventStorage<TEvent> implements EventStorage<TEvent> {
   final List<TEvent> _events;
 
-  InMemoryEventStore([Iterable<TEvent>? initialEvents])
+  InMemoryEventStorage([Iterable<TEvent>? initialEvents])
     : _events = [...?initialEvents];
 
   @override
