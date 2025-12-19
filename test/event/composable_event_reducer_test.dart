@@ -40,7 +40,7 @@ void main() {
                 predicate(
                   (ArgumentError e) =>
                       e.message ==
-                      "Another value is already registered for 'Event0'.",
+                      "Another value is already registered for 'Event0'",
                 ),
               ),
             ),
@@ -88,7 +88,7 @@ void main() {
               isArgumentError,
               predicate(
                 (ArgumentError e) =>
-                    e.message == "No value is registered for 'Event2'.",
+                    e.message == "No value is registered for 'Event2'",
               ),
             ),
           ),

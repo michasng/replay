@@ -117,11 +117,11 @@ class OpenAccountCommandDecider
   ) sync* {
     if (state.balanceByAccountName.containsKey(command.accountName)) {
       throw InvalidCommandException(
-        "Account '${command.accountName}' already exists.",
+        "Account '${command.accountName}' already exists",
       );
     }
     if (command.initialBalance < 0) {
-      throw InvalidCommandException('Balance must not be negative.');
+      throw InvalidCommandException('Balance must not be negative');
     }
 
     yield BalanceSetEvent(
@@ -140,7 +140,7 @@ class CloseAccountCommandDecider
   ) sync* {
     if (!state.balanceByAccountName.containsKey(command.accountName)) {
       throw InvalidCommandException(
-        "Account '${command.accountName}' doesn't exist.",
+        "Account '${command.accountName}' doesn't exist",
       );
     }
 
@@ -158,19 +158,19 @@ class TransferMoneyCommandDecider
     final sourceBalance = state.balanceByAccountName[command.sourceAccountName];
     if (sourceBalance == null) {
       throw InvalidCommandException(
-        "Source account '${command.sourceAccountName}' doesn't exist.",
+        "Source account '${command.sourceAccountName}' doesn't exist",
       );
     }
     if (sourceBalance < command.amount) {
       throw InvalidCommandException(
-        "Balance of account '${command.sourceAccountName}' is insufficient.",
+        "Balance of account '${command.sourceAccountName}' is insufficient",
       );
     }
 
     final targetBalance = state.balanceByAccountName[command.targetAccountName];
     if (targetBalance == null) {
       throw InvalidCommandException(
-        "Target account '${command.targetAccountName}' doesn't exist.",
+        "Target account '${command.targetAccountName}' doesn't exist",
       );
     }
 

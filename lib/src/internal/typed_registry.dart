@@ -6,7 +6,7 @@ class TypedRegistry<T> {
 
   void register(Type type, T value) {
     if (_entries.containsKey(type)) {
-      throw ArgumentError("Another value is already registered for '$type'.");
+      throw ArgumentError("Another value is already registered for '$type'");
     }
 
     _entries[type] = value;
@@ -15,7 +15,7 @@ class TypedRegistry<T> {
   T resolve(Type type) {
     final value = _entries[type];
     if (value == null) {
-      throw ArgumentError("No value is registered for '$type'.");
+      throw ArgumentError("No value is registered for '$type'");
     }
 
     return value;

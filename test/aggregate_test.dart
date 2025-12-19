@@ -151,7 +151,7 @@ void main() {
           setUp(() {
             originalOnDecide = commandDeciderMock.onDecide;
             commandDeciderMock.onDecide = (_, _) =>
-                throw InvalidCommandException('Command is invalid.');
+                throw InvalidCommandException('Command is invalid');
           });
 
           tearDown(() {
@@ -166,7 +166,7 @@ void main() {
                   isA<InvalidCommandException>(),
                   predicate(
                     (InvalidCommandException e) =>
-                        e.message == 'Command is invalid.',
+                        e.message == 'Command is invalid',
                   ),
                 ),
               ),
@@ -194,7 +194,7 @@ void main() {
             eventReducerMock.onReduce = (event, state) {
               onReduceCallCount++;
               if (onReduceCallCount == 2) {
-                throw ArgumentError('Event cannot be reduced.');
+                throw ArgumentError('Event cannot be reduced');
               }
               return originalOnReduce!.call(event, state);
             };
@@ -211,8 +211,7 @@ void main() {
                 allOf(
                   isArgumentError,
                   predicate(
-                    (ArgumentError e) =>
-                        e.message == 'Event cannot be reduced.',
+                    (ArgumentError e) => e.message == 'Event cannot be reduced',
                   ),
                 ),
               ),
