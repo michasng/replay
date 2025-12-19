@@ -1,6 +1,6 @@
 name: replay
 description: Event Sourcing framework for Dart to build auditable apps with immutable events.
-version: 0.0.1
+version: 1.0.0
 repository: https://github.com/michasng/replay
 
 environment:
