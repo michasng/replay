@@ -1,5 +1,4 @@
 import 'package:replay/replay.dart';
-import 'package:replay/src/command/invalid_command_exception.dart';
 import 'package:test/test.dart';
 
 import 'count_example.dart';
