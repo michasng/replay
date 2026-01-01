@@ -90,3 +90,30 @@ Events:
 ### Aggregate
 
 An aggregate acts as a **consistency boundary** — grouping a command's events into **atomic** (all-or-nothing) operations. It enforces **invariants** by validating commands against the state, which is derived from past events. Valid commands produce new events, updating the aggregate. These events are stored immutably to enable auditability.
+
+### Options: Discovering Valid Commands
+
+Sometimes you don’t want to guess whether a command will succeed — you want to know all valid commands, given the current state. \
+This is addressed via a unique (but optional) concept: **Options**.
+
+Options represent potential commands that could be processed for the current state of an aggregate. \
+Just as events are derived from commands, commands are derived from options. \
+Unlike commands, options stem from inspecting the aggregate's state rather than being issued externally. \
+A single option can represent multiple (potentially infinitely many) commands by specifying the constraints that all commands of that type must satisfy.
+
+To implement this, create an `OptionFinder` for your aggregate. It examines the current state and returns all options:
+
+```dart
+final aggregate = AggregateFullyGeneric<BankCommand, BankEvent, BankState, BankOption>(
+  ...
+  optionFinder: ComposableOptionFinder({
+    OpenAccountOption: OpenAccountOptionFinder(),
+    CloseAccountOption: CloseAccountOptionFinder(),
+    TransferMoneyOption: TransferMoneyOptionFinder(),
+  }),
+);
+
+final options = aggregate.findOptions();
+```
+
+This enables automated systems to query all valid commands, empowering UIs where every offered action is guaranteed to succeed.

@@ -2,11 +2,18 @@ import 'package:replay/src/command/command_decider.dart';
 import 'package:replay/src/event/event_reducer.dart';
 import 'package:replay/src/event_storage/event_storage.dart';
 import 'package:replay/src/event_storage/in_memory_event_storage.dart';
+import 'package:replay/src/option/option_finder.dart';
 
 typedef OnEventReduced<TEvent, TState> =
     void Function(TEvent event, TState previousState, TState updatedState);
 
-class Aggregate<TCommand, TEvent, TState> {
+/// Sets / Omits optional generic parameters.
+/// Mainly exists for backwards compatibility.
+typedef Aggregate<TCommand, TEvent, TState> =
+    AggregateFullyGeneric<TCommand, TEvent, TState, dynamic>;
+
+class AggregateFullyGeneric<TCommand, TEvent, TState, TOption> {
+  final OptionFinder<TOption, TState>? _optionFinder;
   final CommandDecider<TCommand, TEvent, TState> _commandDecider;
   final EventReducer<TEvent, TState> _eventReducer;
   final OnEventReduced<TEvent, TState>? _onEventReduced;
@@ -17,14 +24,16 @@ class Aggregate<TCommand, TEvent, TState> {
   EventStorage<TEvent> _eventStorage;
   EventStorage<TEvent> get eventStorage => _eventStorage;
 
-  Aggregate({
+  AggregateFullyGeneric({
     required TState initialState,
+    OptionFinder<TOption, TState>? optionFinder,
     required CommandDecider<TCommand, TEvent, TState> commandDecider,
     required EventReducer<TEvent, TState> eventReducer,
     EventStorage<TEvent>? eventStorage,
     bool replayStoredEvents = false,
     OnEventReduced<TEvent, TState>? onEventReduced,
   }) : _stateSnapshot = initialState,
+       _optionFinder = optionFinder,
        _commandDecider = commandDecider,
        _eventReducer = eventReducer,
        _eventStorage = eventStorage ?? InMemoryEventStorage(),
@@ -51,6 +60,10 @@ class Aggregate<TCommand, TEvent, TState> {
         _onEventReduced?.call(event, previousState, _stateSnapshot);
       }
     }
+  }
+
+  Iterable<TOption> findOptions() {
+    return _optionFinder?.find(_stateSnapshot) ?? [];
   }
 
   TState process(TCommand command) {

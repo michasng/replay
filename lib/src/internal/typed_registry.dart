@@ -20,4 +20,8 @@ class TypedRegistry<T> {
 
     return value;
   }
+
+  Iterable<T> resolveAll() {
+    return _entries.values;
+  }
 }

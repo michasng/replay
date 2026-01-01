@@ -5,6 +5,7 @@ import 'count_example.dart';
 
 void main() {
   group('Aggregate', () {
+    final optionFinderMock = createIncrementOptionFinderMock();
     final commandDeciderMock = createIncrementCommandDeciderMock();
     final eventReducerMock = createIncrementedEventReducerMock();
     final initialState = CountState(0);
@@ -16,9 +17,16 @@ void main() {
       )
     >
     onEventReducedCalls = [];
-    late Aggregate<IncrementCommand, IncrementedEvent, CountState> aggregate;
+    late AggregateFullyGeneric<
+      IncrementCommand,
+      IncrementedEvent,
+      CountState,
+      IncrementOption
+    >
+    aggregate;
 
     setUp(() {
+      optionFinderMock.calls.clear();
       commandDeciderMock.calls.clear();
       eventReducerMock.calls.clear();
       onEventReducedCalls.clear();
@@ -38,8 +46,9 @@ void main() {
       final finalState = CountState(2);
 
       setUp(() {
-        aggregate = Aggregate(
+        aggregate = AggregateFullyGeneric(
           initialState: initialState,
+          optionFinder: optionFinderMock,
           commandDecider: commandDeciderMock,
           eventReducer: eventReducerMock,
           eventStorage: InMemoryEventStorage(storedEvents),
@@ -69,8 +78,9 @@ void main() {
       final storedEvents = [IncrementedEvent(), IncrementedEvent()];
 
       setUp(() {
-        aggregate = Aggregate(
+        aggregate = AggregateFullyGeneric(
           initialState: initialState,
+          optionFinder: optionFinderMock,
           commandDecider: commandDeciderMock,
           eventReducer: eventReducerMock,
           eventStorage: InMemoryEventStorage(storedEvents),
@@ -91,8 +101,9 @@ void main() {
 
     group('when the default event storage is used', () {
       setUp(() {
-        aggregate = Aggregate(
+        aggregate = AggregateFullyGeneric(
           initialState: initialState,
+          optionFinder: optionFinderMock,
           commandDecider: commandDeciderMock,
           eventReducer: eventReducerMock,
           onEventReduced: onEventReduced,
@@ -136,6 +147,15 @@ void main() {
             (storedEvents[1], intermediateState, finalState),
           ]);
           expect(aggregate.currentState, finalState);
+        });
+      });
+
+      group('findOptions', () {
+        test('returns current options', () {
+          final options = aggregate.findOptions();
+
+          expect(options.toList(), [IncrementOption()]);
+          expect(optionFinderMock.calls, [initialState]);
         });
       });
 

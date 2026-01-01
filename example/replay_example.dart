@@ -185,24 +185,106 @@ class TransferMoneyCommandDecider
   }
 }
 
+abstract interface class BankOption {}
+
+class OpenAccountOption implements BankOption {
+  @override
+  String toString() {
+    return '$OpenAccountOption()';
+  }
+}
+
+class OpenAccountOptionFinder
+    implements OptionFinder<OpenAccountOption, BankState> {
+  @override
+  Iterable<OpenAccountOption> find(BankState state) sync* {
+    yield OpenAccountOption();
+  }
+}
+
+class CloseAccountOption implements BankOption {
+  final List<String> accountNames;
+
+  const CloseAccountOption({required this.accountNames});
+
+  @override
+  String toString() {
+    return '$CloseAccountOption(accountNames: $accountNames)';
+  }
+}
+
+class CloseAccountOptionFinder
+    implements OptionFinder<CloseAccountOption, BankState> {
+  @override
+  Iterable<CloseAccountOption> find(BankState state) sync* {
+    yield CloseAccountOption(
+      accountNames: state.balanceByAccountName.keys.toList(),
+    );
+  }
+}
+
+class TransferMoneyOption implements BankOption {
+  final String sourceAccountName;
+  final List<String> targetAccountNames;
+  final int maxAmount;
+
+  const TransferMoneyOption({
+    required this.sourceAccountName,
+    required this.targetAccountNames,
+    required this.maxAmount,
+  });
+
+  @override
+  String toString() {
+    return '$TransferMoneyOption(sourceAccountName: $sourceAccountName, targetAccountNames: $targetAccountNames, maxAmount: $maxAmount)';
+  }
+}
+
+class TransferMoneyOptionFinder
+    implements OptionFinder<TransferMoneyOption, BankState> {
+  @override
+  Iterable<TransferMoneyOption> find(BankState state) sync* {
+    for (final MapEntry(key: sourceAccountName, value: balance)
+        in state.balanceByAccountName.entries) {
+      final targetAccountNames = state.balanceByAccountName.keys
+          .where((accountName) => accountName != sourceAccountName)
+          .toList();
+
+      if (targetAccountNames.isEmpty) continue;
+
+      yield TransferMoneyOption(
+        sourceAccountName: sourceAccountName,
+        targetAccountNames: targetAccountNames,
+        maxAmount: balance,
+      );
+    }
+  }
+}
+
 void main() {
-  final aggregate = Aggregate<BankCommand, BankEvent, BankState>(
-    initialState: BankState(balanceByAccountName: {}),
-    commandDecider: ComposableCommandDecider({
-      OpenAccountCommand: OpenAccountCommandDecider(),
-      CloseAccountCommand: CloseAccountCommandDecider(),
-      TransferMoneyCommand: TransferMoneyCommandDecider(),
-    }),
-    eventReducer: ComposableEventReducer({
-      BalanceSetEvent: BalanceSetEventReducer(),
-      BalanceUnsetEvent: BalanceUnsetEventReducer(),
-    }),
-    eventStorage: InMemoryEventStorage([
-      BalanceSetEvent(accountName: 'Foo', balance: 1000),
-    ]),
-    replayStoredEvents: true,
-    onEventReduced: (event, _, _) => print('Reduced $event'),
-  );
+  final aggregate =
+      AggregateFullyGeneric<BankCommand, BankEvent, BankState, BankOption>(
+        initialState: BankState(balanceByAccountName: {}),
+        optionFinder: ComposableOptionFinder({
+          OpenAccountOption: OpenAccountOptionFinder(),
+          CloseAccountOption: CloseAccountOptionFinder(),
+          TransferMoneyOption: TransferMoneyOptionFinder(),
+        }),
+        commandDecider: ComposableCommandDecider({
+          OpenAccountCommand: OpenAccountCommandDecider(),
+          CloseAccountCommand: CloseAccountCommandDecider(),
+          TransferMoneyCommand: TransferMoneyCommandDecider(),
+        }),
+        eventReducer: ComposableEventReducer({
+          BalanceSetEvent: BalanceSetEventReducer(),
+          BalanceUnsetEvent: BalanceUnsetEventReducer(),
+        }),
+        eventStorage: InMemoryEventStorage([
+          BalanceSetEvent(accountName: 'Foo', balance: 1000),
+        ]),
+        replayStoredEvents: true,
+        onEventReduced: (event, _, _) => print('Reduced $event'),
+      );
   print('Initial state: ${aggregate.currentState}');
 
   final commands = [
@@ -227,6 +309,9 @@ void main() {
   ];
 
   for (final command in commands) {
+    final options = aggregate.findOptions();
+    print('Options: $options');
+
     print('Trying to process command: $command');
     try {
       final state = aggregate.process(command);
@@ -235,4 +320,6 @@ void main() {
       print('Validation failed with $e');
     }
   }
+  final options = aggregate.findOptions();
+  print('Final options: $options');
 }

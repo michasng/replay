@@ -1,5 +1,6 @@
 import 'command/command_decider_mock.dart';
 import 'event/event_reducer_mock.dart';
+import 'option/option_finder_mock.dart';
 
 class CountState {
   final int count;
@@ -53,6 +54,25 @@ class IncrementCommand {
   @override
   String toString() => '$IncrementCommand(increment: $increment)';
 }
+
+class IncrementOption {
+  const IncrementOption();
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is IncrementOption && runtimeType == other.runtimeType;
+
+  @override
+  int get hashCode => 0;
+
+  @override
+  String toString() => '$IncrementOption()';
+}
+
+OptionFinderMock<IncrementOption, CountState>
+createIncrementOptionFinderMock() =>
+    OptionFinderMock((_) => [IncrementOption()]);
 
 CommandDeciderMock<IncrementCommand, IncrementedEvent, CountState>
 createIncrementCommandDeciderMock() => CommandDeciderMock(
