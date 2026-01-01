@@ -56,7 +56,7 @@ void main() {
       );
 
       test(
-        "when registering another decider for a different command types, doesn't throw",
+        "when registering another decider for a different command type, doesn't throw",
         () {
           composableCommandDecider.register<Command1>(command1DeciderMock);
         },
