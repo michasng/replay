@@ -1,7 +1,8 @@
 import 'package:replay/src/command/invalid_command_exception.dart';
 
 abstract interface class CommandDecider<TCommand, TEvent, TState> {
-  /// Validates a command against the state to decide which events need to be reduced to reach the desired state.
+  /// Validates a command against the state to decide which events need to be reduced to transform the state.
+  /// Implementations of this method must have no side-effects.
   ///
   /// Throws an [InvalidCommandException] when the command is invalid.
   /// Otherwise returns events that need to be reduced in sequence on the state to fulfill the command.
