@@ -51,12 +51,9 @@ Write out their names when discussing their trade-offs.
 - Run `dart fix --apply` and `dart format .` to auto-fix lint and formatting issues before staging
 - Verify every change with `dart analyze --fatal-infos` and `dart test`
 - Keep responses and diffs minimal; skip restating unchanged code
-
-### Commit messages
-
 - Suggest a non-technical commit message
-- Tiny first line, no commas or bullet points
-- Optionally a blank line, then more context if it helps
+  - Tiny first line, no commas or bullet points
+  - Optionally a blank line, then more context if it helps
 
 ## Agent skills
 
