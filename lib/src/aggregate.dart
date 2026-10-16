@@ -75,14 +75,22 @@ class AggregateFullyGeneric<TCommand, TEvent, TState, TOption> {
       reductions.add((event: event, updatedState: runningState));
     }
 
-    // commit transaction
+    // commit transaction: storage first, then state, then callbacks
     for (final reduction in reductions) {
-      final previousState = _stateSnapshot;
-      _stateSnapshot = reduction.updatedState;
-
       _eventStorage.append(reduction.event);
+    }
 
-      _onEventReduced?.call(reduction.event, previousState, _stateSnapshot);
+    final previousState = _stateSnapshot;
+    _stateSnapshot = runningState;
+
+    var callbackPreviousState = previousState;
+    for (final reduction in reductions) {
+      _onEventReduced?.call(
+        reduction.event,
+        callbackPreviousState,
+        reduction.updatedState,
+      );
+      callbackPreviousState = reduction.updatedState;
     }
 
     return _stateSnapshot;

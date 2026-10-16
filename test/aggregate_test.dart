@@ -3,6 +3,14 @@ import 'package:test/test.dart';
 
 import 'count_example.dart';
 
+class _ThrowingEventStorage implements EventStorage<IncrementedEvent> {
+  @override
+  Iterable<IncrementedEvent> get iterable => const [];
+
+  @override
+  void append(IncrementedEvent event) => throw StateError('append');
+}
+
 void main() {
   group('Aggregate', () {
     final optionFinderMock = createIncrementOptionFinderMock();
@@ -245,6 +253,58 @@ void main() {
             expect(onEventReducedCalls, isEmpty);
             expect(aggregate.eventStorage.iterable, isEmpty);
             expect(aggregate.currentState, initialState);
+          });
+        });
+
+        group('when appending the first event throws', () {
+          test('leaves state unchanged', () {
+            final storage = _ThrowingEventStorage();
+            final failingAggregate =
+                AggregateFullyGeneric<
+                  IncrementCommand,
+                  IncrementedEvent,
+                  CountState,
+                  IncrementOption
+                >(
+                  initialState: initialState,
+                  commandDecider: commandDeciderMock,
+                  eventReducer: eventReducerMock,
+                  eventStorage: storage,
+                  onEventReduced: onEventReduced,
+                );
+
+            expect(
+              () => failingAggregate.process(IncrementCommand(2)),
+              throwsStateError,
+            );
+
+            expect(failingAggregate.currentState, initialState);
+            expect(onEventReducedCalls, isEmpty);
+          });
+        });
+
+        group('when onEventReduced throws', () {
+          test('state and storage are both fully updated', () {
+            final failingAggregate =
+                AggregateFullyGeneric<
+                  IncrementCommand,
+                  IncrementedEvent,
+                  CountState,
+                  IncrementOption
+                >(
+                  initialState: initialState,
+                  commandDecider: commandDeciderMock,
+                  eventReducer: eventReducerMock,
+                  onEventReduced: (_, _, _) => throw StateError('callback'),
+                );
+
+            expect(
+              () => failingAggregate.process(IncrementCommand(2)),
+              throwsStateError,
+            );
+
+            expect(failingAggregate.currentState, CountState(2));
+            expect(failingAggregate.eventStorage.iterable, hasLength(2));
           });
         });
 
