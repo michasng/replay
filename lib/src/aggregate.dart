@@ -70,15 +70,10 @@ class AggregateFullyGeneric<TCommand, TEvent, TState, TOption> {
     final events = _commandDecider.decide(command, _stateSnapshot);
 
     final reductions = <({TEvent event, TState updatedState})>[];
-    try {
-      var runningState = _stateSnapshot;
-      for (final event in events) {
-        runningState = _eventReducer.reduce(event, runningState);
-        reductions.add((event: event, updatedState: runningState));
-      }
-    } catch (_) {
-      // rollback transaction, i.e. do not commit
-      rethrow;
+    var runningState = _stateSnapshot;
+    for (final event in events) {
+      runningState = _eventReducer.reduce(event, runningState);
+      reductions.add((event: event, updatedState: runningState));
     }
 
     // commit transaction
