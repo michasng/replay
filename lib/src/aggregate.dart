@@ -21,8 +21,8 @@ class AggregateFullyGeneric<TCommand, TEvent, TState, TOption> {
   final EventReducer<TEvent, TState> _eventReducer;
   final OnEventReduced<TEvent, TState>? _onEventReduced;
 
-  TState _stateSnapshot;
-  TState get currentState => _stateSnapshot;
+  TState _state;
+  TState get currentState => _state;
 
   EventStorage<TEvent> _eventStorage;
   EventStorage<TEvent> get eventStorage => _eventStorage;
@@ -35,7 +35,7 @@ class AggregateFullyGeneric<TCommand, TEvent, TState, TOption> {
     EventStorage<TEvent>? eventStorage,
     bool replayStoredEvents = false,
     this._onEventReduced,
-  }) : _stateSnapshot = initialState,
+  }) : _state = initialState,
        _eventStorage = eventStorage ?? InMemoryEventStorage() {
     if (replayStoredEvents) _replayStoredEvents();
   }
@@ -44,7 +44,7 @@ class AggregateFullyGeneric<TCommand, TEvent, TState, TOption> {
     required TState initialState,
     required EventStorage<TEvent> eventStorage,
   }) {
-    _stateSnapshot = initialState;
+    _state = initialState;
     _eventStorage = eventStorage;
     _replayStoredEvents();
   }
@@ -53,23 +53,23 @@ class AggregateFullyGeneric<TCommand, TEvent, TState, TOption> {
     final events = _eventStorage.iterable;
     if (events.isNotEmpty) {
       for (final event in events) {
-        final previousState = _stateSnapshot;
-        _stateSnapshot = _eventReducer.reduce(event, _stateSnapshot);
+        final previousState = _state;
+        _state = _eventReducer.reduce(event, _state);
 
-        _onEventReduced?.call(event, previousState, _stateSnapshot);
+        _onEventReduced?.call(event, previousState, _state);
       }
     }
   }
 
   Iterable<TOption> findOptions() {
-    return _optionFinder?.find(_stateSnapshot) ?? [];
+    return _optionFinder?.find(_state) ?? [];
   }
 
   TState process(TCommand command) {
-    final events = _commandDecider.decide(command, _stateSnapshot);
+    final events = _commandDecider.decide(command, _state);
 
     final reductions = <({TEvent event, TState updatedState})>[];
-    var runningState = _stateSnapshot;
+    var runningState = _state;
     for (final event in events) {
       runningState = _eventReducer.reduce(event, runningState);
       reductions.add((event: event, updatedState: runningState));
@@ -80,8 +80,8 @@ class AggregateFullyGeneric<TCommand, TEvent, TState, TOption> {
       _eventStorage.append(reduction.event);
     }
 
-    final previousState = _stateSnapshot;
-    _stateSnapshot = runningState;
+    final previousState = _state;
+    _state = runningState;
 
     var callbackPreviousState = previousState;
     for (final reduction in reductions) {
@@ -93,6 +93,6 @@ class AggregateFullyGeneric<TCommand, TEvent, TState, TOption> {
       callbackPreviousState = reduction.updatedState;
     }
 
-    return _stateSnapshot;
+    return _state;
   }
 }
