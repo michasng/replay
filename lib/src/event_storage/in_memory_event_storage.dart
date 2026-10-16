@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:replay/src/event_storage/event_storage.dart';
 
 class InMemoryEventStorage<TEvent> implements EventStorage<TEvent> {
@@ -7,7 +9,7 @@ class InMemoryEventStorage<TEvent> implements EventStorage<TEvent> {
     : _events = [...?initialEvents];
 
   @override
-  Iterable<TEvent> get iterable => _events;
+  Iterable<TEvent> get iterable => UnmodifiableListView(_events);
 
   @override
   void append(TEvent event) {
