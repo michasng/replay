@@ -49,6 +49,17 @@ void main() {
       test("when registering another finder for a different option type, doesn't throw", () {
         composableOptionFinder.register<Option1>(option1FinderMock);
       });
+
+      test("doesn't modify the map passed to the constructor", () {
+        final finderByOptionType = <Type, OptionFinder<Option, State>>{
+          Option0: option0FinderMock,
+        };
+
+        ComposableOptionFinder(finderByOptionType)
+            .register<Option1>(option1FinderMock);
+
+        expect(finderByOptionType.keys, [Option0]);
+      });
     });
 
     group('find', () {
@@ -69,6 +80,18 @@ void main() {
         expect(option0FinderMock.calls, [state]);
         expect(option1FinderMock.calls, [state]);
       });
+    });
+
+    test('given finders registered out of type order, find returns options in registration order', () {
+      final finder = ComposableOptionFinder<Option, State>()
+        ..register<Option1>(option1FinderMock)
+        ..register<Option0>(option0FinderMock);
+      final option0 = Option0();
+      final option1 = Option1();
+      option0FinderMock.onFind = (_) => [option0];
+      option1FinderMock.onFind = (_) => [option1];
+
+      expect(finder.find(State()), [option1, option0]);
     });
   });
 }

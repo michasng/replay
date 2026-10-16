@@ -2,7 +2,7 @@
 class TypedRegistry<T> {
   final Map<Type, T> _entries;
 
-  TypedRegistry([Map<Type, T>? entries]) : _entries = entries ?? {};
+  TypedRegistry([Map<Type, T>? entries]) : _entries = {...?entries};
 
   void register(Type type, T value) {
     if (_entries.containsKey(type)) {
