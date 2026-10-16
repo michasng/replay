@@ -31,6 +31,9 @@ Write out their names when discussing their trade-offs.
 - Never suppress analyzer errors or lints (`// ignore:`, `// ignore_for_file:`)
 - No type casts (`as`) unless there is no better option; if unavoidable, add a short comment explaining why
 - No magic numbers or strings; extract them to named constants or enums
+- Use functional APIs (e.g. `.map`) and list comprehensions
+- No `forEach`; use a `for` loop for side effects
+- Public APIs must be described briefly in dartdoc comments
 - No dead code, commented-out blocks, or leftover `TODO`s
 
 ## Testing
