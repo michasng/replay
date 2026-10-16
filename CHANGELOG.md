@@ -1,3 +1,7 @@
+## 2.0.0
+
+- update dart SDK constraint to `^3.13.5`
+
 ## 1.1.0
 
 - add `OptionFinder`

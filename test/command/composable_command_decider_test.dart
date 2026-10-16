@@ -55,12 +55,9 @@ void main() {
         },
       );
 
-      test(
-        "when registering another decider for a different command type, doesn't throw",
-        () {
-          composableCommandDecider.register<Command1>(command1DeciderMock);
-        },
-      );
+      test("when registering another decider for a different command type, doesn't throw", () {
+        composableCommandDecider.register<Command1>(command1DeciderMock);
+      });
     });
 
     group('decide', () {
@@ -68,21 +65,18 @@ void main() {
         composableCommandDecider.register<Command1>(command1DeciderMock);
       });
 
-      test(
-        'given a known command type, calls only the decider registered for that type',
-        () {
-          final command = Command1();
-          final state = State();
-          final expectedEvents = [Event0(), Event0()];
-          command1DeciderMock.onDecide = (_, _) => expectedEvents;
+      test('given a known command type, calls only the decider registered for that type', () {
+        final command = Command1();
+        final state = State();
+        final expectedEvents = [Event0(), Event0()];
+        command1DeciderMock.onDecide = (_, _) => expectedEvents;
 
-          final events = composableCommandDecider.decide(command, state);
+        final events = composableCommandDecider.decide(command, state);
 
-          expect(events, expectedEvents);
-          expect(command0DeciderMock.calls, isEmpty);
-          expect(command1DeciderMock.calls, [(command, state)]);
-        },
-      );
+        expect(events, expectedEvents);
+        expect(command0DeciderMock.calls, isEmpty);
+        expect(command1DeciderMock.calls, [(command, state)]);
+      });
 
       test('given an unknown command type, throws', () {
         final command = Command2();

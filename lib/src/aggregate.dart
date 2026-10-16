@@ -4,8 +4,11 @@ import 'package:replay/src/event_storage/event_storage.dart';
 import 'package:replay/src/event_storage/in_memory_event_storage.dart';
 import 'package:replay/src/option/option_finder.dart';
 
-typedef OnEventReduced<TEvent, TState> =
-    void Function(TEvent event, TState previousState, TState updatedState);
+typedef OnEventReduced<TEvent, TState> = void Function(
+  TEvent event,
+  TState previousState,
+  TState updatedState,
+);
 
 /// Sets / Omits optional generic parameters.
 /// Mainly exists for backwards compatibility.
@@ -26,18 +29,14 @@ class AggregateFullyGeneric<TCommand, TEvent, TState, TOption> {
 
   AggregateFullyGeneric({
     required TState initialState,
-    OptionFinder<TOption, TState>? optionFinder,
-    required CommandDecider<TCommand, TEvent, TState> commandDecider,
-    required EventReducer<TEvent, TState> eventReducer,
+    this._optionFinder,
+    required this._commandDecider,
+    required this._eventReducer,
     EventStorage<TEvent>? eventStorage,
     bool replayStoredEvents = false,
-    OnEventReduced<TEvent, TState>? onEventReduced,
+    this._onEventReduced,
   }) : _stateSnapshot = initialState,
-       _optionFinder = optionFinder,
-       _commandDecider = commandDecider,
-       _eventReducer = eventReducer,
-       _eventStorage = eventStorage ?? InMemoryEventStorage(),
-       _onEventReduced = onEventReduced {
+       _eventStorage = eventStorage ?? InMemoryEventStorage() {
     if (replayStoredEvents) _replayStoredEvents();
   }
 

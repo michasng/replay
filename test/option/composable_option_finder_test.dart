@@ -46,12 +46,9 @@ void main() {
         },
       );
 
-      test(
-        "when registering another finder for a different option type, doesn't throw",
-        () {
-          composableOptionFinder.register<Option1>(option1FinderMock);
-        },
-      );
+      test("when registering another finder for a different option type, doesn't throw", () {
+        composableOptionFinder.register<Option1>(option1FinderMock);
+      });
     });
 
     group('find', () {
