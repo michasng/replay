@@ -3,16 +3,15 @@ import 'package:replay/src/option/option_finder.dart';
 
 class ComposableOptionFinder<TOption, TState>
     implements OptionFinder<TOption, TState> {
-  final TypedRegistry<OptionFinder<TOption, TState>> _registry;
+  final TypedRegistry<TOption, OptionFinder<TOption, TState>> _registry =
+      TypedRegistry();
 
-  ComposableOptionFinder([
-    Map<Type, OptionFinder<TOption, TState>>? finderByOptionType,
-  ]) : _registry = TypedRegistry(finderByOptionType);
-
+  /// Registers a finder for options of type [TConcreteOption].
+  /// Finders are invoked in registration order.
   void register<TConcreteOption extends TOption>(
     OptionFinder<TConcreteOption, TState> finder,
   ) {
-    _registry.register(TConcreteOption, finder);
+    _registry.register<TConcreteOption>(finder);
   }
 
   @override

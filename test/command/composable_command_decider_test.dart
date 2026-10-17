@@ -17,6 +17,8 @@ class Command1 implements Command {}
 
 class Command2 implements Command {}
 
+class Command1Sub extends Command1 {}
+
 void main() {
   group('ComposableCommandDecider', () {
     final command0DeciderMock = CommandDeciderMock<Command0, Event, State>();
@@ -28,9 +30,8 @@ void main() {
       command0DeciderMock.calls.clear();
       command1DeciderMock.calls.clear();
 
-      composableCommandDecider = ComposableCommandDecider({
-        Command0: command0DeciderMock,
-      });
+      composableCommandDecider = ComposableCommandDecider()
+        ..register<Command0>(command0DeciderMock);
     });
 
     group('register', () {
@@ -86,14 +87,41 @@ void main() {
           () => composableCommandDecider.decide(command, state),
           throwsA(
             allOf(
-              isArgumentError,
+              isStateError,
               predicate(
-                (ArgumentError e) =>
+                (StateError e) =>
                     e.message == "No value is registered for 'Command2'",
               ),
             ),
           ),
         );
+      });
+
+      test(
+        'given a subtype of a registered command type, calls that decider',
+        () {
+          final command = Command1Sub();
+          final state = State();
+          command1DeciderMock.onDecide = (_, _) => [];
+
+          composableCommandDecider.decide(command, state);
+
+          expect(command1DeciderMock.calls, [(command, state)]);
+        },
+      );
+
+      test('given overlapping registrations, the first registered wins', () {
+        final broadMock = CommandDeciderMock<Command, Event, State>();
+        final decider = ComposableCommandDecider<Command, Event, State>()
+          ..register<Command1>(command1DeciderMock)
+          ..register<Command>(broadMock);
+        command1DeciderMock.onDecide = (_, _) => [];
+
+        decider.decide(Command1(), State());
+        decider.decide(Command2(), State());
+
+        expect(command1DeciderMock.calls, hasLength(1));
+        expect(broadMock.calls, hasLength(1));
       });
     });
   });

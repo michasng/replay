@@ -21,9 +21,8 @@ void main() {
       option0FinderMock.calls.clear();
       option1FinderMock.calls.clear();
 
-      composableOptionFinder = ComposableOptionFinder({
-        Option0: option0FinderMock,
-      });
+      composableOptionFinder = ComposableOptionFinder()
+        ..register<Option0>(option0FinderMock);
     });
 
     group('register', () {
@@ -48,17 +47,6 @@ void main() {
 
       test("when registering another finder for a different option type, doesn't throw", () {
         composableOptionFinder.register<Option1>(option1FinderMock);
-      });
-
-      test("doesn't modify the map passed to the constructor", () {
-        final finderByOptionType = <Type, OptionFinder<Option, State>>{
-          Option0: option0FinderMock,
-        };
-
-        ComposableOptionFinder(finderByOptionType)
-            .register<Option1>(option1FinderMock);
-
-        expect(finderByOptionType.keys, [Option0]);
       });
     });
 

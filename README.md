@@ -47,15 +47,13 @@ import 'package:replay/replay.dart';
 
 final aggregate = Aggregate<BankCommand, BankEvent, BankState>(
   initialState: BankState(),
-  commandDecider: ComposableCommandDecider({
-    OpenAccountCommand: OpenAccountCommandDecider(),
-    CloseAccountCommand: CloseAccountCommandDecider(),
-    TransferMoneyCommand: TransferMoneyCommandDecider(),
-  }),
-  eventReducer: ComposableEventReducer({
-    BalanceSetEvent: BalanceSetEventReducer(),
-    BalanceUnsetEvent: BalanceUnsetEventReducer(),
-  }),
+  commandDecider: ComposableCommandDecider<BankCommand, BankEvent, BankState>()
+    ..register<OpenAccountCommand>(OpenAccountCommandDecider())
+    ..register<CloseAccountCommand>(CloseAccountCommandDecider())
+    ..register<TransferMoneyCommand>(TransferMoneyCommandDecider()),
+  eventReducer: ComposableEventReducer<BankEvent, BankState>()
+    ..register<BalanceSetEvent>(BalanceSetEventReducer())
+    ..register<BalanceUnsetEvent>(BalanceUnsetEventReducer()),
   eventStorage: InMemoryEventStorage(),
 );
 
@@ -106,11 +104,10 @@ To implement this, create an `OptionFinder` for your aggregate. It examines the 
 ```dart
 final aggregate = AggregateFullyGeneric<BankCommand, BankEvent, BankState, BankOption>(
   ...
-  optionFinder: ComposableOptionFinder({
-    OpenAccountOption: OpenAccountOptionFinder(),
-    CloseAccountOption: CloseAccountOptionFinder(),
-    TransferMoneyOption: TransferMoneyOptionFinder(),
-  }),
+  optionFinder: ComposableOptionFinder<BankOption, BankState>()
+    ..register<OpenAccountOption>(OpenAccountOptionFinder())
+    ..register<CloseAccountOption>(CloseAccountOptionFinder())
+    ..register<TransferMoneyOption>(TransferMoneyOptionFinder()),
 );
 
 final options = aggregate.findOptions();

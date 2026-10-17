@@ -265,20 +265,18 @@ void main() {
   final aggregate =
       AggregateFullyGeneric<BankCommand, BankEvent, BankState, BankOption>(
         initialState: BankState(balanceByAccountName: {}),
-        optionFinder: ComposableOptionFinder({
-          OpenAccountOption: OpenAccountOptionFinder(),
-          CloseAccountOption: CloseAccountOptionFinder(),
-          TransferMoneyOption: TransferMoneyOptionFinder(),
-        }),
-        commandDecider: ComposableCommandDecider({
-          OpenAccountCommand: OpenAccountCommandDecider(),
-          CloseAccountCommand: CloseAccountCommandDecider(),
-          TransferMoneyCommand: TransferMoneyCommandDecider(),
-        }),
-        eventReducer: ComposableEventReducer({
-          BalanceSetEvent: BalanceSetEventReducer(),
-          BalanceUnsetEvent: BalanceUnsetEventReducer(),
-        }),
+        optionFinder: ComposableOptionFinder<BankOption, BankState>()
+          ..register<OpenAccountOption>(OpenAccountOptionFinder())
+          ..register<CloseAccountOption>(CloseAccountOptionFinder())
+          ..register<TransferMoneyOption>(TransferMoneyOptionFinder()),
+        commandDecider:
+            ComposableCommandDecider<BankCommand, BankEvent, BankState>()
+              ..register<OpenAccountCommand>(OpenAccountCommandDecider())
+              ..register<CloseAccountCommand>(CloseAccountCommandDecider())
+              ..register<TransferMoneyCommand>(TransferMoneyCommandDecider()),
+        eventReducer: ComposableEventReducer<BankEvent, BankState>()
+          ..register<BalanceSetEvent>(BalanceSetEventReducer())
+          ..register<BalanceUnsetEvent>(BalanceUnsetEventReducer()),
         eventStorage: InMemoryEventStorage([
           BalanceSetEvent(accountName: 'Foo', balance: 1000),
         ]),

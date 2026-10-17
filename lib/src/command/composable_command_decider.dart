@@ -3,22 +3,19 @@ import 'package:replay/src/internal/typed_registry.dart';
 
 class ComposableCommandDecider<TCommand, TEvent, TState>
     implements CommandDecider<TCommand, TEvent, TState> {
-  final TypedRegistry<CommandDecider<TCommand, TEvent, TState>> _registry;
+  final TypedRegistry<TCommand, CommandDecider<TCommand, TEvent, TState>>
+  _registry = TypedRegistry();
 
-  ComposableCommandDecider([
-    Map<Type, CommandDecider<TCommand, TEvent, TState>>? deciderByCommandType,
-  ]) : _registry = TypedRegistry(deciderByCommandType);
-
+  /// Registers a decider for commands of type [TConcreteCommand], including subtypes.
+  /// When several registrations match a command, the first registered wins.
   void register<TConcreteCommand extends TCommand>(
     CommandDecider<TConcreteCommand, TEvent, TState> commandDecider,
   ) {
-    _registry.register(TConcreteCommand, commandDecider);
+    _registry.register<TConcreteCommand>(commandDecider);
   }
 
   @override
   Iterable<TEvent> decide(TCommand command, TState state) {
-    final commandDecider = _registry.resolve(command.runtimeType);
-
-    return commandDecider.decide(command, state);
+    return _registry.resolve(command).decide(command, state);
   }
 }

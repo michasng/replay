@@ -3,22 +3,19 @@ import 'package:replay/src/internal/typed_registry.dart';
 
 class ComposableEventReducer<TEvent, TState>
     implements EventReducer<TEvent, TState> {
-  final TypedRegistry<EventReducer<TEvent, TState>> _registry;
+  final TypedRegistry<TEvent, EventReducer<TEvent, TState>> _registry =
+      TypedRegistry();
 
-  ComposableEventReducer([
-    Map<Type, EventReducer<TEvent, TState>>? reducerByEventType,
-  ]) : _registry = TypedRegistry(reducerByEventType);
-
+  /// Registers a reducer for events of type [TConcreteEvent], including subtypes.
+  /// When several registrations match an event, the first registered wins.
   void register<TConcreteEvent extends TEvent>(
     EventReducer<TConcreteEvent, TState> eventReducer,
   ) {
-    _registry.register(TConcreteEvent, eventReducer);
+    _registry.register<TConcreteEvent>(eventReducer);
   }
 
   @override
   TState reduce(TEvent event, TState state) {
-    final eventReducer = _registry.resolve(event.runtimeType);
-
-    return eventReducer.reduce(event, state);
+    return _registry.resolve(event).reduce(event, state);
   }
 }

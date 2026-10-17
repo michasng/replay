@@ -1,27 +1,28 @@
-/// A registry for storing and retrieving instances by their type.
-class TypedRegistry<T> {
-  final Map<Type, T> _entries;
+/// A registry of values by type.
+///
+/// Values are resolved by subtype matching, in registration order.
+class TypedRegistry<TBase, TValue> {
+  final List<({Type type, bool Function(TBase) matches, TValue value})>
+  _entries = [];
 
-  TypedRegistry([Map<Type, T>? entries]) : _entries = {...?entries};
-
-  void register(Type type, T value) {
-    if (_entries.containsKey(type)) {
-      throw ArgumentError("Another value is already registered for '$type'");
+  void register<T extends TBase>(TValue value) {
+    if (_entries.any((entry) => entry.type == T)) {
+      throw ArgumentError("Another value is already registered for '$T'");
     }
 
-    _entries[type] = value;
+    _entries.add((type: T, matches: (base) => base is T, value: value));
   }
 
-  T resolve(Type type) {
-    final value = _entries[type];
-    if (value == null) {
-      throw ArgumentError("No value is registered for '$type'");
+  /// Returns the first registered value whose type matches [base].
+  TValue resolve(TBase base) {
+    for (final entry in _entries) {
+      if (entry.matches(base)) return entry.value;
     }
 
-    return value;
+    throw StateError("No value is registered for '${base.runtimeType}'");
   }
 
-  Iterable<T> resolveAll() {
-    return _entries.values;
+  Iterable<TValue> resolveAll() {
+    return _entries.map((entry) => entry.value);
   }
 }
