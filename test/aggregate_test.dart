@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:replay/replay.dart';
 import 'package:test/test.dart';
 
@@ -26,30 +28,23 @@ void main() {
     final commandDeciderMock = createIncrementCommandDeciderMock();
     final eventReducerMock = createIncrementedEventReducerMock();
     final initialState = CountState(0);
-    final List<
-      (
-        IncrementedEvent event,
-        CountState previousState,
-        CountState updatedState,
-      )
-    >
-    onEventReducedCalls = [];
     late _CountAggregate aggregate;
 
     setUp(() {
       optionFinderMock.calls.clear();
       commandDeciderMock.calls.clear();
       eventReducerMock.calls.clear();
-      onEventReducedCalls.clear();
     });
 
-    void onEventReduced(
-      IncrementedEvent event,
-      CountState previousState,
-      CountState updatedState,
-    ) {
-      onEventReducedCalls.add((event, previousState, updatedState));
-    }
+    Future<
+      List<(IncrementedEvent event, CountState previousState, CountState state)>
+    >
+    collectReductions(_CountAggregate aggregate) => aggregate.events
+        .map(
+          (reduction) =>
+              (reduction.event, reduction.previousState, reduction.state),
+        )
+        .toList();
 
     Future<_CountAggregate> load([EventStorage<IncrementedEvent>? storage]) =>
         _CountAggregate.load<
@@ -63,7 +58,6 @@ void main() {
           commandDecider: commandDeciderMock,
           eventReducer: eventReducerMock,
           eventStorage: storage,
-          onEventReduced: onEventReduced,
         );
 
     group('load', () {
@@ -81,11 +75,15 @@ void main() {
             (storedEvents[0], initialState),
             (storedEvents[1], intermediateState),
           ]);
-          expect(onEventReducedCalls, [
-            (storedEvents[0], initialState, intermediateState),
-            (storedEvents[1], intermediateState, finalState),
-          ]);
           expect(aggregate.currentState, finalState);
+        });
+
+        test('does not notify about replayed events', () async {
+          final reductions = collectReductions(aggregate);
+
+          await aggregate.close();
+
+          expect(await reductions, isEmpty);
         });
 
         test('keeps the event storage', () async {
@@ -122,14 +120,12 @@ void main() {
               commandDecider: commandDeciderMock,
               eventReducer: eventReducerMock,
               eventStorage: InMemoryEventStorage(storedEvents),
-              onEventReduced: onEventReduced,
             );
       });
 
       test('starts in the given state without replaying stored events', () {
         expect(aggregate.currentState, resumedState);
         expect(eventReducerMock.calls, isEmpty);
-        expect(onEventReducedCalls, isEmpty);
       });
 
       test('appends new events after the stored events', () async {
@@ -213,6 +209,8 @@ void main() {
         });
 
         test('throws without committing any events', () async {
+          final reductions = collectReductions(aggregate);
+
           await expectLater(
             aggregate.process(command),
             throwsA(
@@ -225,10 +223,11 @@ void main() {
               ),
             ),
           );
+          await aggregate.close();
 
           expect(commandDeciderMock.calls, [(command, initialState)]);
           expect(eventReducerMock.calls, isEmpty);
-          expect(onEventReducedCalls, isEmpty);
+          expect(await reductions, isEmpty);
           expect(await aggregate.eventStorage.readAll().toList(), isEmpty);
           expect(aggregate.currentState, initialState);
         });
@@ -259,6 +258,8 @@ void main() {
         });
 
         test('throws without committing any events', () async {
+          final reductions = collectReductions(aggregate);
+
           await expectLater(
             aggregate.process(command),
             throwsA(
@@ -270,13 +271,14 @@ void main() {
               ),
             ),
           );
+          await aggregate.close();
 
           expect(commandDeciderMock.calls, [(command, initialState)]);
           expect(eventReducerMock.calls, [
             (events[0], initialState),
             (events[1], intermediateState),
           ]);
-          expect(onEventReducedCalls, isEmpty);
+          expect(await reductions, isEmpty);
           expect(await aggregate.eventStorage.readAll().toList(), isEmpty);
           expect(aggregate.currentState, initialState);
         });
@@ -285,42 +287,74 @@ void main() {
       group('when appending the events fails', () {
         test('leaves state unchanged', () async {
           final failingAggregate = await load(_FailingEventStorage());
+          final reductions = collectReductions(failingAggregate);
 
           await expectLater(
             failingAggregate.process(IncrementCommand(2)),
             throwsStateError,
           );
+          await failingAggregate.close();
 
           expect(failingAggregate.currentState, initialState);
-          expect(onEventReducedCalls, isEmpty);
+          expect(await reductions, isEmpty);
         });
       });
 
-      group('when onEventReduced throws', () {
-        test('state and storage are both fully updated', () async {
-          final failingAggregate =
-              await _CountAggregate.load<
-                IncrementCommand,
-                IncrementedEvent,
-                CountState,
-                IncrementOption
-              >(
-                initialState: initialState,
-                commandDecider: commandDeciderMock,
-                eventReducer: eventReducerMock,
-                onEventReduced: (_, _, _) => throw StateError('callback'),
-              );
+      group('when a listener throws', () {
+        test(
+          'state, storage and the processed result are unaffected',
+          () async {
+            final listenerErrors = <Object>[];
+            runZonedGuarded(
+              () =>
+                  aggregate.events.listen((_) => throw StateError('listener')),
+              (error, _) => listenerErrors.add(error),
+            );
 
-          await expectLater(
-            failingAggregate.process(IncrementCommand(2)),
-            throwsStateError,
-          );
+            final state = await aggregate.process(IncrementCommand(2));
+            await aggregate.close();
 
-          expect(failingAggregate.currentState, CountState(2));
-          expect(
-            await failingAggregate.eventStorage.readAll().toList(),
-            hasLength(2),
-          );
+            expect(state, CountState(2));
+            expect(aggregate.currentState, CountState(2));
+            expect(
+              await aggregate.eventStorage.readAll().toList(),
+              hasLength(2),
+            );
+            expect(listenerErrors, [isStateError, isStateError]);
+          },
+        );
+      });
+
+      group('when commands overlap', () {
+        test('each decides against the state left by the previous', () async {
+          final first = aggregate.process(IncrementCommand(1));
+          final second = aggregate.process(IncrementCommand(2));
+
+          expect(await first, CountState(1));
+          expect(await second, CountState(3));
+          expect(commandDeciderMock.calls, [
+            (IncrementCommand(1), initialState),
+            (IncrementCommand(2), CountState(1)),
+          ]);
+        });
+
+        test('a rejected command does not block the next one', () async {
+          final originalOnDecide = commandDeciderMock.onDecide;
+          final acceptingOnDecide =
+              createIncrementCommandDeciderMock().onDecide;
+          commandDeciderMock.onDecide = (command, state) {
+            if (command == IncrementCommand(0)) {
+              throw InvalidCommandException('Command is invalid');
+            }
+            return acceptingOnDecide?.call(command, state) ?? [];
+          };
+          addTearDown(() => commandDeciderMock.onDecide = originalOnDecide);
+
+          final rejected = aggregate.process(IncrementCommand(0));
+          final accepted = aggregate.process(IncrementCommand(2));
+
+          await expectLater(rejected, throwsA(isA<InvalidCommandException>()));
+          expect(await accepted, CountState(2));
         });
       });
 
@@ -331,7 +365,10 @@ void main() {
         final finalState = CountState(2);
 
         test('processes the command', () async {
+          final reductions = collectReductions(aggregate);
+
           final state = await aggregate.process(command);
+          await aggregate.close();
 
           expect(state, finalState);
           expect(commandDeciderMock.calls, [(command, initialState)]);
@@ -339,7 +376,7 @@ void main() {
             (events[0], initialState),
             (events[1], intermediateState),
           ]);
-          expect(onEventReducedCalls, [
+          expect(await reductions, [
             (events[0], initialState, intermediateState),
             (events[1], intermediateState, finalState),
           ]);
@@ -354,6 +391,39 @@ void main() {
 
           expect(reloaded.currentState, finalState);
         });
+      });
+    });
+
+    group('close', () {
+      setUp(() async {
+        aggregate = await load();
+      });
+
+      test('finishes queued commands first', () async {
+        final queued = aggregate.process(IncrementCommand(2));
+
+        await aggregate.close();
+
+        expect(aggregate.currentState, CountState(2));
+        expect(await queued, CountState(2));
+      });
+
+      test('ends the event stream', () async {
+        final reductions = collectReductions(aggregate);
+
+        await aggregate.close();
+
+        expect(await reductions, isEmpty);
+      });
+
+      test('rejects later commands', () async {
+        await aggregate.close();
+
+        await expectLater(
+          aggregate.process(IncrementCommand(1)),
+          throwsStateError,
+        );
+        expect(commandDeciderMock.calls, isEmpty);
       });
     });
   });

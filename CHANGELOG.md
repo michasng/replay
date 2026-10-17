@@ -9,6 +9,9 @@
 - create aggregates with the async `AggregateFullyGeneric.load`; the constructor is private
 - remove `replayStoredEvents` and `replay()`; `load` always replays stored events
 - add `AggregateFullyGeneric.resume` to start from a given state without replaying stored events
+- `Aggregate.process` queues commands and processes them one at a time, in arrival order
+- replace `onEventReduced` with the broadcast stream `Aggregate.events` of `Reduction`; replayed events are not emitted and throwing listeners cannot affect a commit
+- add `Aggregate.close()` to finish queued commands, close `events` and reject later commands with a `StateError`
 
 ## 1.1.0
 

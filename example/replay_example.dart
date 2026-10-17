@@ -285,8 +285,8 @@ Future<void> main() async {
         eventStorage: InMemoryEventStorage([
           BalanceSetEvent(accountName: 'Foo', balance: 1000),
         ]),
-        onEventReduced: (event, _, _) => print('Reduced $event'),
       );
+  aggregate.events.listen((reduction) => print('Reduced ${reduction.event}'));
   print('Initial state: ${aggregate.currentState}');
 
   final commands = [
@@ -324,4 +324,5 @@ Future<void> main() async {
   }
   final options = aggregate.findOptions();
   print('Final options: $options');
+  await aggregate.close();
 }

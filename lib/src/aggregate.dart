@@ -1,14 +1,14 @@
+import 'dart:async';
+
 import 'package:replay/src/command/command_decider.dart';
 import 'package:replay/src/event/event_reducer.dart';
+import 'package:replay/src/event/reduction.dart';
 import 'package:replay/src/event_storage/event_storage.dart';
 import 'package:replay/src/event_storage/in_memory_event_storage.dart';
+import 'package:replay/src/internal/serial_queue.dart';
 import 'package:replay/src/option/option_finder.dart';
 
-typedef OnEventReduced<TEvent, TState> = void Function(
-  TEvent event,
-  TState previousState,
-  TState updatedState,
-);
+const _closedMessage = 'Cannot process commands after close';
 
 /// Sets / Omits optional generic parameters.
 /// Mainly exists for backwards compatibility.
@@ -19,12 +19,20 @@ class AggregateFullyGeneric<TCommand, TEvent, TState, TOption> {
   final OptionFinder<TOption, TState>? _optionFinder;
   final CommandDecider<TCommand, TEvent, TState> _commandDecider;
   final EventReducer<TEvent, TState> _eventReducer;
-  final OnEventReduced<TEvent, TState>? _onEventReduced;
+
+  final _commandQueue = SerialQueue();
+  final _eventsController =
+      StreamController<Reduction<TEvent, TState>>.broadcast();
+  bool _isClosed = false;
 
   TState _state;
   TState get currentState => _state;
 
   final EventStorage<TEvent> eventStorage;
+
+  /// Notifies about every committed event, after its commit.
+  /// Replayed events are not included.
+  Stream<Reduction<TEvent, TState>> get events => _eventsController.stream;
 
   AggregateFullyGeneric._({
     required TState initialState,
@@ -32,7 +40,6 @@ class AggregateFullyGeneric<TCommand, TEvent, TState, TOption> {
     required this._commandDecider,
     required this._eventReducer,
     required this.eventStorage,
-    required this._onEventReduced,
   }) : _state = initialState;
 
   /// Creates an aggregate and replays all events of [eventStorage] onto [initialState].
@@ -44,7 +51,6 @@ class AggregateFullyGeneric<TCommand, TEvent, TState, TOption> {
     required CommandDecider<TCommand, TEvent, TState> commandDecider,
     required EventReducer<TEvent, TState> eventReducer,
     EventStorage<TEvent>? eventStorage,
-    OnEventReduced<TEvent, TState>? onEventReduced,
   }) async {
     final aggregate =
         AggregateFullyGeneric<TCommand, TEvent, TState, TOption>._(
@@ -53,7 +59,6 @@ class AggregateFullyGeneric<TCommand, TEvent, TState, TOption> {
           commandDecider: commandDecider,
           eventReducer: eventReducer,
           eventStorage: eventStorage ?? InMemoryEventStorage(),
-          onEventReduced: onEventReduced,
         );
     await aggregate._replayStoredEvents();
     return aggregate;
@@ -71,22 +76,17 @@ class AggregateFullyGeneric<TCommand, TEvent, TState, TOption> {
     required CommandDecider<TCommand, TEvent, TState> commandDecider,
     required EventReducer<TEvent, TState> eventReducer,
     EventStorage<TEvent>? eventStorage,
-    OnEventReduced<TEvent, TState>? onEventReduced,
   }) => AggregateFullyGeneric<TCommand, TEvent, TState, TOption>._(
     initialState: state,
     optionFinder: optionFinder,
     commandDecider: commandDecider,
     eventReducer: eventReducer,
     eventStorage: eventStorage ?? InMemoryEventStorage(),
-    onEventReduced: onEventReduced,
   );
 
   Future<void> _replayStoredEvents() async {
     await for (final event in eventStorage.readAll()) {
-      final previousState = _state;
       _state = _eventReducer.reduce(event, _state);
-
-      _onEventReduced?.call(event, previousState, _state);
     }
   }
 
@@ -94,36 +94,53 @@ class AggregateFullyGeneric<TCommand, TEvent, TState, TOption> {
     return _optionFinder?.find(_state) ?? [];
   }
 
-  /// Decides [command], stores the resulting events with a single
-  /// [EventStorage.appendAll] and only then updates the state.
+  /// Queues [command] behind all previously processed commands.
+  /// Once its turn comes, decides it, stores the resulting events with a
+  /// single [EventStorage.appendAll] and only then updates the state.
   Future<TState> process(TCommand command) async {
-    final events = _commandDecider.decide(command, _state);
-
-    final reductions = <({TEvent event, TState updatedState})>[];
-    var runningState = _state;
-    for (final event in events) {
-      runningState = _eventReducer.reduce(event, runningState);
-      reductions.add((event: event, updatedState: runningState));
+    if (_isClosed) {
+      throw StateError(_closedMessage);
     }
 
-    // commit transaction: storage first, then state, then callbacks
+    return _commandQueue.run(() => _commit(command));
+  }
+
+  Future<TState> _commit(TCommand command) async {
+    final events = _commandDecider.decide(command, _state);
+
+    final reductions = <Reduction<TEvent, TState>>[];
+    var runningState = _state;
+    for (final event in events) {
+      final previousState = runningState;
+      runningState = _eventReducer.reduce(event, runningState);
+      reductions.add(
+        Reduction(
+          event: event,
+          previousState: previousState,
+          state: runningState,
+        ),
+      );
+    }
+
+    // commit transaction: storage first, then state, then notifications
     await eventStorage.appendAll([
       for (final reduction in reductions) reduction.event,
     ]);
 
-    final previousState = _state;
     _state = runningState;
 
-    var callbackPreviousState = previousState;
     for (final reduction in reductions) {
-      _onEventReduced?.call(
-        reduction.event,
-        callbackPreviousState,
-        reduction.updatedState,
-      );
-      callbackPreviousState = reduction.updatedState;
+      _eventsController.add(reduction);
     }
 
     return _state;
+  }
+
+  /// Finishes all queued commands, then closes [events].
+  /// Afterwards [process] fails with a [StateError].
+  Future<void> close() async {
+    _isClosed = true;
+    await _commandQueue.idle;
+    await _eventsController.close();
   }
 }
