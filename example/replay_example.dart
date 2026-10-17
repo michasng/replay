@@ -261,9 +261,14 @@ class TransferMoneyOptionFinder
   }
 }
 
-void main() {
+Future<void> main() async {
   final aggregate =
-      AggregateFullyGeneric<BankCommand, BankEvent, BankState, BankOption>(
+      await AggregateFullyGeneric.load<
+        BankCommand,
+        BankEvent,
+        BankState,
+        BankOption
+      >(
         initialState: BankState(balanceByAccountName: {}),
         optionFinder: ComposableOptionFinder<BankOption, BankState>()
           ..register<OpenAccountOption>(OpenAccountOptionFinder())
@@ -280,7 +285,6 @@ void main() {
         eventStorage: InMemoryEventStorage([
           BalanceSetEvent(accountName: 'Foo', balance: 1000),
         ]),
-        replayStoredEvents: true,
         onEventReduced: (event, _, _) => print('Reduced $event'),
       );
   print('Initial state: ${aggregate.currentState}');
@@ -312,7 +316,7 @@ void main() {
 
     print('Trying to process command: $command');
     try {
-      final state = aggregate.process(command);
+      final state = await aggregate.process(command);
       print('Updated state: $state');
     } catch (e) {
       print('Validation failed with $e');

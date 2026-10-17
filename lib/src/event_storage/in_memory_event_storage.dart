@@ -1,7 +1,6 @@
-import 'dart:collection';
-
 import 'package:replay/src/event_storage/event_storage.dart';
 
+/// Keeps events in memory only.
 class InMemoryEventStorage<TEvent> implements EventStorage<TEvent> {
   final List<TEvent> _events;
 
@@ -9,10 +8,10 @@ class InMemoryEventStorage<TEvent> implements EventStorage<TEvent> {
     : _events = [...?initialEvents];
 
   @override
-  Iterable<TEvent> get iterable => UnmodifiableListView(_events);
+  Stream<TEvent> readAll() => Stream.fromIterable([..._events]);
 
   @override
-  void append(TEvent event) {
-    _events.add(event);
+  Future<void> appendAll(List<TEvent> events) async {
+    _events.addAll(events);
   }
 }

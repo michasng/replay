@@ -4,6 +4,11 @@
 - remove the `Map` constructor parameters of `ComposableCommandDecider`, `ComposableEventReducer` and `ComposableOptionFinder`; use `register`
 - dispatch composable deciders and reducers by subtype (`is T`); the first matching registration wins
 - throw `StateError` instead of `ArgumentError` when no registration matches a command or event
+- `EventStorage` is asynchronous: `readAll()` returns a `Stream` and `appendAll(List)` replaces `iterable` and `append`; `appendAll` is all-or-nothing
+- `Aggregate.process` returns a `Future` and commits all events of a command with a single `appendAll`
+- create aggregates with the async `AggregateFullyGeneric.load`; the constructor is private
+- remove `replayStoredEvents` and `replay()`; `load` always replays stored events
+- add `AggregateFullyGeneric.resume` to start from a given state without replaying stored events
 
 ## 1.1.0
 

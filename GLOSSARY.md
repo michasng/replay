@@ -25,12 +25,16 @@ _Avoid_: Transaction, save
 ### Reading
 
 **State**:
-The value obtained by applying every event, in order, to an initial value. Commands are validated against it, and callers may read it directly.
+The value obtained by applying every event, in order, to an initial value, or supplied by the caller when resuming. Commands are validated against it, and callers may read it directly.
 _Avoid_: Snapshot, current snapshot
 
 **Replay**:
 Rebuilding state by applying stored events, in order, to an initial state.
 _Avoid_: Rehydrate, restore
+
+**Resume**:
+Starting an aggregate from a caller-supplied state that already reflects the stored events, without replaying them. Keeping that state consistent with the events is the caller's responsibility.
+_Avoid_: Snapshot, restore
 
 **Projection**:
 A read-only view derived from events outside the aggregate, shaped for a particular query. It is never used to validate commands and can be discarded and rebuilt.

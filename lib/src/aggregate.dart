@@ -24,40 +24,69 @@ class AggregateFullyGeneric<TCommand, TEvent, TState, TOption> {
   TState _state;
   TState get currentState => _state;
 
-  EventStorage<TEvent> _eventStorage;
-  EventStorage<TEvent> get eventStorage => _eventStorage;
+  final EventStorage<TEvent> eventStorage;
 
-  AggregateFullyGeneric({
+  AggregateFullyGeneric._({
     required TState initialState,
-    this._optionFinder,
+    required this._optionFinder,
     required this._commandDecider,
     required this._eventReducer,
-    EventStorage<TEvent>? eventStorage,
-    bool replayStoredEvents = false,
-    this._onEventReduced,
-  }) : _state = initialState,
-       _eventStorage = eventStorage ?? InMemoryEventStorage() {
-    if (replayStoredEvents) _replayStoredEvents();
-  }
+    required this.eventStorage,
+    required this._onEventReduced,
+  }) : _state = initialState;
 
-  void replay({
+  /// Creates an aggregate and replays all events of [eventStorage] onto [initialState].
+  /// Without an [eventStorage], events are kept in memory.
+  static Future<AggregateFullyGeneric<TCommand, TEvent, TState, TOption>>
+  load<TCommand, TEvent, TState, TOption>({
     required TState initialState,
-    required EventStorage<TEvent> eventStorage,
-  }) {
-    _state = initialState;
-    _eventStorage = eventStorage;
-    _replayStoredEvents();
+    OptionFinder<TOption, TState>? optionFinder,
+    required CommandDecider<TCommand, TEvent, TState> commandDecider,
+    required EventReducer<TEvent, TState> eventReducer,
+    EventStorage<TEvent>? eventStorage,
+    OnEventReduced<TEvent, TState>? onEventReduced,
+  }) async {
+    final aggregate =
+        AggregateFullyGeneric<TCommand, TEvent, TState, TOption>._(
+          initialState: initialState,
+          optionFinder: optionFinder,
+          commandDecider: commandDecider,
+          eventReducer: eventReducer,
+          eventStorage: eventStorage ?? InMemoryEventStorage(),
+          onEventReduced: onEventReduced,
+        );
+    await aggregate._replayStoredEvents();
+    return aggregate;
   }
 
-  void _replayStoredEvents() {
-    final events = _eventStorage.iterable;
-    if (events.isNotEmpty) {
-      for (final event in events) {
-        final previousState = _state;
-        _state = _eventReducer.reduce(event, _state);
+  /// Creates an aggregate that starts in [state] without reading [eventStorage].
+  /// Only events appended from now on are applied.
+  ///
+  /// [state] should already reflect the events in [eventStorage].
+  /// Otherwise loading the same storage later yields a different state.
+  static AggregateFullyGeneric<TCommand, TEvent, TState, TOption>
+  resume<TCommand, TEvent, TState, TOption>({
+    required TState state,
+    OptionFinder<TOption, TState>? optionFinder,
+    required CommandDecider<TCommand, TEvent, TState> commandDecider,
+    required EventReducer<TEvent, TState> eventReducer,
+    EventStorage<TEvent>? eventStorage,
+    OnEventReduced<TEvent, TState>? onEventReduced,
+  }) => AggregateFullyGeneric<TCommand, TEvent, TState, TOption>._(
+    initialState: state,
+    optionFinder: optionFinder,
+    commandDecider: commandDecider,
+    eventReducer: eventReducer,
+    eventStorage: eventStorage ?? InMemoryEventStorage(),
+    onEventReduced: onEventReduced,
+  );
 
-        _onEventReduced?.call(event, previousState, _state);
-      }
+  Future<void> _replayStoredEvents() async {
+    await for (final event in eventStorage.readAll()) {
+      final previousState = _state;
+      _state = _eventReducer.reduce(event, _state);
+
+      _onEventReduced?.call(event, previousState, _state);
     }
   }
 
@@ -65,7 +94,9 @@ class AggregateFullyGeneric<TCommand, TEvent, TState, TOption> {
     return _optionFinder?.find(_state) ?? [];
   }
 
-  TState process(TCommand command) {
+  /// Decides [command], stores the resulting events with a single
+  /// [EventStorage.appendAll] and only then updates the state.
+  Future<TState> process(TCommand command) async {
     final events = _commandDecider.decide(command, _state);
 
     final reductions = <({TEvent event, TState updatedState})>[];
@@ -76,9 +107,9 @@ class AggregateFullyGeneric<TCommand, TEvent, TState, TOption> {
     }
 
     // commit transaction: storage first, then state, then callbacks
-    for (final reduction in reductions) {
-      _eventStorage.append(reduction.event);
-    }
+    await eventStorage.appendAll([
+      for (final reduction in reductions) reduction.event,
+    ]);
 
     final previousState = _state;
     _state = runningState;
