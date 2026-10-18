@@ -20,10 +20,10 @@ dart pub add replay
 
 ## Features
 
-✔️ Idempotent event processing \
-✔️ Snapshotting support \
-✔️ In-memory or custom event storage support \
-🔜 Automatic partitioning (WIP) \
+✔️ Deterministic replay \
+✔️ Atomic, queued command processing \
+✔️ In-memory or custom asynchronous event storage \
+✔️ Event stream for building read models \
 ✔️ Sound null safety \
 ✔️ 100 % test coverage \
 ✔️ No dependencies
@@ -40,7 +40,7 @@ Start by defining immutable classes for:
 
 Then create classes that implement `CommandDecider` and `EventReducer`.
 
-Finally put it all together in one `Aggregate` and call `process` on every command:
+Finally put it all together in one `Aggregate` and `await` `process` for every command. It returns the new state; commands are queued and handled one at a time:
 
 ```dart
 import 'package:replay/replay.dart';
@@ -58,7 +58,17 @@ final aggregate = await Aggregate.load(
 );
 
 await aggregate.process(OpenAccountCommand(accountName: 'Foo', initialBalance: 100));
+
+await aggregate.close();
 ```
+
+`Aggregate.load` replays all stored events. To skip the replay, start from a state you already know with the synchronous `Aggregate.resume`; it must match the stored events.
+
+Read the current state via `aggregate.currentState`. To react to committed events (e.g. to maintain read models), listen to the broadcast `aggregate.events` stream of `Reduction`s.
+
+### Event storage
+
+Implement `EventStorage` to persist events. `readAll` streams all events in append order and `appendAll` stores a command's events all-or-nothing. Each storage belongs to exactly one aggregate. `InMemoryEventStorage` is the default.
 
 ## Concepts
 
@@ -81,8 +91,7 @@ Events:
 - Always immutable (cannot be modified) & append-only
 - Can never be invalid
 - Used to construct the application state (single source of truth)
-  - Use "snapshots" of the state for optimized queries (Command Query Responsibility Segregation - CQRS)
-- Idempotent: Processing the same event repeatedly always results in the same state
+- Deterministic: Replaying the same events always results in the same state
 - Atomic: Either processing succeeds completely or nothing changes
 
 ### Aggregate
@@ -92,7 +101,7 @@ An aggregate acts as a **consistency boundary** — grouping a command's events 
 ### Options: Discovering Valid Commands
 
 Sometimes you don’t want to guess whether a command will succeed — you want to know all valid commands, given the current state. \
-This is addressed via a unique (but optional) concept: **Options**.
+This is addressed via a unique (but optional) concept: **Options**. They are independent of the `Aggregate`.
 
 Options represent potential commands that could be processed for the current state of an aggregate. \
 Just as events are derived from commands, commands are derived from options. \

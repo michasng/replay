@@ -15,6 +15,18 @@
 - replace `onEventReduced` with the broadcast stream `Aggregate.events` of `Reduction`; replayed events are not emitted and throwing listeners cannot affect a commit
 - add `Aggregate.close()` to finish queued commands, close `events` and reject later commands with a `StateError`
 
+### Migrating from 1.x
+
+- `Aggregate(...)` / `AggregateFullyGeneric(...)` → `await Aggregate.load(...)`; use `Aggregate.resume(...)` to start from a known state without replaying.
+- Remove `replayStoredEvents` and `replay()` calls; `load` replays automatically.
+- `aggregate.process(command)` → `await aggregate.process(command)`; it returns the new state.
+- Implement `EventStorage` with `Stream<E> readAll()` and `Future<void> appendAll(List<E>)` instead of `iterable` and `append`.
+- `onEventReduced` callback → listen to `aggregate.events`.
+- `aggregate.findOptions()` → `optionFinder.find(aggregate.currentState)`.
+- Replace `Map` constructor arguments of the composable classes with `register<T>(...)`.
+- Catch `StateError` instead of `ArgumentError` for unregistered types.
+- Call `await aggregate.close()` when done.
+
 ## 1.1.0
 
 - add `OptionFinder`
