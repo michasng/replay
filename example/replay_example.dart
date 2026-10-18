@@ -262,30 +262,24 @@ class TransferMoneyOptionFinder
 }
 
 Future<void> main() async {
-  final aggregate =
-      await AggregateFullyGeneric.load<
-        BankCommand,
-        BankEvent,
-        BankState,
-        BankOption
-      >(
-        initialState: BankState(balanceByAccountName: {}),
-        optionFinder: ComposableOptionFinder<BankOption, BankState>()
-          ..register<OpenAccountOption>(OpenAccountOptionFinder())
-          ..register<CloseAccountOption>(CloseAccountOptionFinder())
-          ..register<TransferMoneyOption>(TransferMoneyOptionFinder()),
-        commandDecider:
-            ComposableCommandDecider<BankCommand, BankEvent, BankState>()
-              ..register<OpenAccountCommand>(OpenAccountCommandDecider())
-              ..register<CloseAccountCommand>(CloseAccountCommandDecider())
-              ..register<TransferMoneyCommand>(TransferMoneyCommandDecider()),
-        eventReducer: ComposableEventReducer<BankEvent, BankState>()
-          ..register<BalanceSetEvent>(BalanceSetEventReducer())
-          ..register<BalanceUnsetEvent>(BalanceUnsetEventReducer()),
-        eventStorage: InMemoryEventStorage([
-          BalanceSetEvent(accountName: 'Foo', balance: 1000),
-        ]),
-      );
+  final optionFinder = ComposableOptionFinder<BankOption, BankState>()
+    ..register<OpenAccountOption>(OpenAccountOptionFinder())
+    ..register<CloseAccountOption>(CloseAccountOptionFinder())
+    ..register<TransferMoneyOption>(TransferMoneyOptionFinder());
+  final aggregate = await Aggregate.load<BankCommand, BankEvent, BankState>(
+    initialState: BankState(balanceByAccountName: {}),
+    commandDecider:
+        ComposableCommandDecider<BankCommand, BankEvent, BankState>()
+          ..register<OpenAccountCommand>(OpenAccountCommandDecider())
+          ..register<CloseAccountCommand>(CloseAccountCommandDecider())
+          ..register<TransferMoneyCommand>(TransferMoneyCommandDecider()),
+    eventReducer: ComposableEventReducer<BankEvent, BankState>()
+      ..register<BalanceSetEvent>(BalanceSetEventReducer())
+      ..register<BalanceUnsetEvent>(BalanceUnsetEventReducer()),
+    eventStorage: InMemoryEventStorage([
+      BalanceSetEvent(accountName: 'Foo', balance: 1000),
+    ]),
+  );
   aggregate.events.listen((reduction) => print('Reduced ${reduction.event}'));
   print('Initial state: ${aggregate.currentState}');
 
@@ -311,7 +305,7 @@ Future<void> main() async {
   ];
 
   for (final command in commands) {
-    final options = aggregate.findOptions();
+    final options = optionFinder.find(aggregate.currentState);
     print('Options: $options');
 
     print('Trying to process command: $command');
@@ -322,7 +316,7 @@ Future<void> main() async {
       print('Validation failed with $e');
     }
   }
-  final options = aggregate.findOptions();
+  final options = optionFinder.find(aggregate.currentState);
   print('Final options: $options');
   await aggregate.close();
 }

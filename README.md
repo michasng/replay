@@ -45,7 +45,7 @@ Finally put it all together in one `Aggregate` and call `process` on every comma
 ```dart
 import 'package:replay/replay.dart';
 
-final aggregate = await AggregateFullyGeneric.load(
+final aggregate = await Aggregate.load(
   initialState: BankState(),
   commandDecider: ComposableCommandDecider<BankCommand, BankEvent, BankState>()
     ..register<OpenAccountCommand>(OpenAccountCommandDecider())
@@ -102,15 +102,12 @@ A single option can represent multiple (potentially infinitely many) commands by
 To implement this, create an `OptionFinder` for your aggregate. It examines the current state and returns all options:
 
 ```dart
-final aggregate = await AggregateFullyGeneric.load<BankCommand, BankEvent, BankState, BankOption>(
-  ...
-  optionFinder: ComposableOptionFinder<BankOption, BankState>()
-    ..register<OpenAccountOption>(OpenAccountOptionFinder())
-    ..register<CloseAccountOption>(CloseAccountOptionFinder())
-    ..register<TransferMoneyOption>(TransferMoneyOptionFinder()),
-);
+final optionFinder = ComposableOptionFinder<BankOption, BankState>()
+  ..register<OpenAccountOption>(OpenAccountOptionFinder())
+  ..register<CloseAccountOption>(CloseAccountOptionFinder())
+  ..register<TransferMoneyOption>(TransferMoneyOptionFinder());
 
-final options = aggregate.findOptions();
+final options = optionFinder.find(aggregate.currentState);
 ```
 
 This enables automated systems to query all valid commands, empowering UIs where every offered action is guaranteed to succeed.

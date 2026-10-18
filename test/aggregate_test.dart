@@ -15,23 +15,16 @@ class _FailingEventStorage implements EventStorage<IncrementedEvent> {
 }
 
 typedef _CountAggregate =
-    AggregateFullyGeneric<
-      IncrementCommand,
-      IncrementedEvent,
-      CountState,
-      IncrementOption
-    >;
+    Aggregate<IncrementCommand, IncrementedEvent, CountState>;
 
 void main() {
   group('Aggregate', () {
-    final optionFinderMock = createIncrementOptionFinderMock();
     final commandDeciderMock = createIncrementCommandDeciderMock();
     final eventReducerMock = createIncrementedEventReducerMock();
     final initialState = CountState(0);
     late _CountAggregate aggregate;
 
     setUp(() {
-      optionFinderMock.calls.clear();
       commandDeciderMock.calls.clear();
       eventReducerMock.calls.clear();
     });
@@ -47,14 +40,8 @@ void main() {
         .toList();
 
     Future<_CountAggregate> load([EventStorage<IncrementedEvent>? storage]) =>
-        _CountAggregate.load<
-          IncrementCommand,
-          IncrementedEvent,
-          CountState,
-          IncrementOption
-        >(
+        _CountAggregate.load<IncrementCommand, IncrementedEvent, CountState>(
           initialState: initialState,
-          optionFinder: optionFinderMock,
           commandDecider: commandDeciderMock,
           eventReducer: eventReducerMock,
           eventStorage: storage,
@@ -113,8 +100,7 @@ void main() {
             _CountAggregate.resume<
               IncrementCommand,
               IncrementedEvent,
-              CountState,
-              IncrementOption
+              CountState
             >(
               state: resumedState,
               commandDecider: commandDeciderMock,
@@ -145,8 +131,7 @@ void main() {
               _CountAggregate.resume<
                 IncrementCommand,
                 IncrementedEvent,
-                CountState,
-                IncrementOption
+                CountState
               >(
                 state: resumedState,
                 commandDecider: commandDeciderMock,
@@ -156,33 +141,6 @@ void main() {
           expect(await resumed.eventStorage.readAll().toList(), isEmpty);
         },
       );
-    });
-
-    group('findOptions', () {
-      test('returns current options', () async {
-        aggregate = await load();
-
-        final options = aggregate.findOptions();
-
-        expect(options.toList(), [IncrementOption()]);
-        expect(optionFinderMock.calls, [initialState]);
-      });
-
-      test('given no option finder, returns no options', () async {
-        final aggregateWithoutOptions =
-            await _CountAggregate.load<
-              IncrementCommand,
-              IncrementedEvent,
-              CountState,
-              IncrementOption
-            >(
-              initialState: initialState,
-              commandDecider: commandDeciderMock,
-              eventReducer: eventReducerMock,
-            );
-
-        expect(aggregateWithoutOptions.findOptions(), isEmpty);
-      });
     });
 
     group('process', () {
